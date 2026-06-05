@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jogo da Velha 🐱</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #fff9f0;
+      --yellow: #FFD93D;
+      --pink: #FF6B9D;
+      --blue: #4CC9F0;
+      --green: #06D6A0;
+      --purple: #9B5DE5;
+      --orange: #FF9A3C;
+      --white: #ffffff;
+      --text: #3d2c8d;
+      --shadow: rgba(61,44,141,0.15);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    /* Floating shapes background */
+    .bg-shapes {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .shape {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.18;
+      animation: float linear infinite;
+    }
+
+    @keyframes float {
+      0%   { transform: translateY(0) rotate(0deg); }
+      50%  { transform: translateY(-30px) rotate(180deg); }
+      100% { transform: translateY(0) rotate(360deg); }
+    }
+
+    /* Main container */
+    .container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      max-width: 420px;
+      width: 100%;
+    }
+
+    /* Title */
+    .title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(2rem, 9vw, 3rem);
+      color: var(--purple);
+      text-align: center;
+      letter-spacing: 0.03em;
+      filter: drop-shadow(3px 3px 0px rgba(155,93,229,0.25));
+    }
+
+    /* Status */
+    .status-bar {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(1rem, 4vw, 1.3rem);
+      padding: 12px 28px;
+      border-radius: 50px;
+      background: var(--white);
+      box-shadow: 0 4px 0 var(--shadow), 0 6px 20px var(--shadow);
+      color: var(--text);
+      text-align: center;
+      min-width: 240px;
+      transition: all 0.3s ease;
+      letter-spacing: 0.02em;
+    }
+
+    /* Scoreboard */
+    .scoreboard {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .score-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--white);
+      border-radius: 20px;
+      padding: 12px 20px;
+      box-shadow: 0 4px 0 var(--shadow), 0 6px 16px var(--shadow);
+      min-width: 90px;
+      gap: 2px;
+    }
+
+    .score-emoji { font-size: 1.6rem; line-height: 1; }
+    .score-label { font-size: 0.65rem; font-weight: 800; color: #aaa; letter-spacing: 0.1em; text-transform: uppercase; }
+    .score-value { font-family: 'Fredoka One', cursive; font-size: 2rem; line-height: 1; }
+
+    .score-card.x-card .score-value { color: var(--pink); }
+    .score-card.o-card .score-value { color: var(--blue); }
+    .score-card.d-card .score-value { color: var(--green); }
+
+    .score-sep { font-size: 1.4rem; color: #ddd; font-weight: 800; }
+
+    /* Board */
+    .board-wrap {
+      background: var(--white);
+      border-radius: 28px;
+      padding: 16px;
+      box-shadow: 0 8px 0 var(--shadow), 0 12px 30px var(--shadow);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .cell {
+      width: clamp(88px, 25vw, 110px);
+      height: clamp(88px, 25vw, 110px);
+      background: #f5f0ff;
+      border: 3px solid #e8e0ff;
+      border-radius: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(2.4rem, 9vw, 3.2rem);
+      transition: transform 0.15s, background 0.2s, border-color 0.2s;
+      position: relative;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .cell:hover:not(.taken) {
+      background: #ede8ff;
+      border-color: #c5b5ff;
+      transform: scale(1.05);
+    }
+
+    .cell:active:not(.taken) { transform: scale(0.95); }
+
+    .cell.taken { cursor: default; }
+
+    .cell .mark {
+      display: block;
+      animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      line-height: 1;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0) rotate(-15deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+    }
+
+    .cell.winner {
+      background: #fff9c4;
+      border-color: var(--yellow);
+      animation: winBounce 0.5s ease infinite alternate;
+    }
+
+    @keyframes winBounce {
+      from { transform: scale(1); }
+      to   { transform: scale(1.07); }
+    }
+
+    /* Buttons */
+    .controls { display: flex; gap: 12px; }
+
+    .btn {
+      font-family: 'Fredoka One', cursive;
+      font-size: 0.9rem;
+      letter-spacing: 0.03em;
+      padding: 12px 22px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+    }
+
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,0.12); }
+    .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.12); }
+
+    .btn-new   { background: var(--green); color: white; }
+    .btn-reset { background: #f5f0ff; color: var(--purple); }
+
+    /* Overlay */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,249,240,0.88);
+      backdrop-filter: blur(6px);
+    }
+    .overlay.show { display: flex; }
+
+    .overlay-card {
+      background: var(--white);
+      border-radius: 32px;
+      padding: 40px 48px;
+      text-align: center;
+      box-shadow: 0 16px 0 var(--shadow), 0 20px 60px var(--shadow);
+      animation: cardPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    @keyframes cardPop {
+      from { transform: scale(0.5) translateY(40px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .overlay-emoji { font-size: 5rem; line-height: 1; animation: spin 0.5s ease; }
+    @keyframes spin { from { transform: rotate(-20deg) scale(0.5); } to { transform: rotate(0) scale(1); } }
+
+    .overlay-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(1.6rem, 6vw, 2.2rem);
+      color: var(--purple);
+    }
+
+    .overlay-sub { font-size: 1rem; font-weight: 700; color: #aaa; margin-bottom: 10px; }
+
+    .overlay-btn {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1rem;
+      padding: 14px 36px;
+      border: none;
+      border-radius: 50px;
+      background: var(--yellow);
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+      transition: transform 0.15s;
+    }
+    .overlay-btn:hover { transform: scale(1.05); }
+    .overlay-btn:active { transform: scale(0.97); }
+
+    /* Confetti */
+    .confetti-piece {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 300;
+      animation: confettiFall linear forwards;
+    }
+
+    @keyframes confettiFall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background shapes -->
+  <div class="bg-shapes" id="bgShapes"></div>
+
+  <div class="container">
+    <h1 class="title">🎮 Jogo da Velha</h1>
+
+    <div class="scoreboard">
+      <div class="score-card x-card">
+        <span class="score-emoji">😸</span>
+        <span class="score-label">Gatinho</span>
+        <span class="score-value" id="score-x">0</span>
+      </div>
+      <span class="score-sep">vs</span>
+      <div class="score-card d-card">
+        <span class="score-emoji">🤝</span>
+        <span class="score-label">Empate</span>
+        <span class="score-value" id="score-d">0</span>
+      </div>
+      <span class="score-sep">vs</span>
+      <div class="score-card o-card">
+        <span class="score-emoji">🐶</span>
+        <span class="score-label">Cachorro</span>
+        <span class="score-value" id="score-o">0</span>
+      </div>
+    </div>
+
+    <div class="status-bar" id="status">😸 Vez do Gatinho!</div>
+
+    <div class="board-wrap">
+      <div class="board" id="board">
+        <button class="cell" data-i="0"><span class="mark"></span></button>
+        <button class="cell" data-i="1"><span class="mark"></span></button>
+        <button class="cell" data-i="2"><span class="mark"></span></button>
+        <button class="cell" data-i="3"><span class="mark"></span></button>
+        <button class="cell" data-i="4"><span class="mark"></span></button>
+        <button class="cell" data-i="5"><span class="mark"></span></button>
+        <button class="cell" data-i="6"><span class="mark"></span></button>
+        <button class="cell" data-i="7"><span class="mark"></span></button>
+        <button class="cell" data-i="8"><span class="mark"></span></button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-new" id="btn-new">🔄 Nova Partida</button>
+      <button class="btn btn-reset" id="btn-reset">🗑️ Zerar Placar</button>
+    </div>
+  </div>
+
+  <!-- Victory overlay -->
+  <div class="overlay" id="overlay">
+    <div class="overlay-card">
+      <span class="overlay-emoji" id="overlay-emoji">🎉</span>
+      <p class="overlay-title" id="overlay-title">Parabéns!</p>
+      <p class="overlay-sub" id="overlay-sub">Gatinho venceu!</p>
+      <button class="overlay-btn" id="overlay-btn">🎮 Jogar de Novo!</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Background shapes ──────────────────────────────────────────
+    const colors = ['#FFD93D','#FF6B9D','#4CC9F0','#06D6A0','#9B5DE5','#FF9A3C'];
+    const bgEl = document.getElementById('bgShapes');
+    for (let i = 0; i < 18; i++) {
+      const s = document.createElement('div');
+      s.className = 'shape';
+      const size = 40 + Math.random() * 120;
+      s.style.cssText = `
+        width:${size}px; height:${size}px;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        top:${Math.random()*110-5}%;
+        left:${Math.random()*110-5}%;
+        animation-duration:${5+Math.random()*8}s;
+        animation-delay:${-Math.random()*8}s;
+        border-radius:${30+Math.random()*50}%;
+      `;
+      bgEl.appendChild(s);
+    }
+
+    // ── Game logic ─────────────────────────────────────────────────
+    const WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    const PLAYERS = {
+      X: { emoji: '😸', name: 'Gatinho', color: '#FF6B9D' },
+      O: { emoji: '🐶', name: 'Cachorro', color: '#4CC9F0' }
+    };
+
+    let board = Array(9).fill(null);
+    let current = 'X';
+    let gameOver = false;
+    let scores = { X:0, O:0, D:0 };
+
+    const cells    = document.querySelectorAll('.cell');
+    const statusEl = document.getElementById('status');
+    const overlay  = document.getElementById('overlay');
+    const scoreXEl = document.getElementById('score-x');
+    const scoreOEl = document.getElementById('score-o');
+    const scoreDEl = document.getElementById('score-d');
+
+    // Audio
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playTone(freq, dur, type='sine') {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.3, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+      o.start(); o.stop(ac.currentTime + dur);
+    }
+
+    function playClick(player) {
+      playTone(player === 'X' ? 520 : 380, 0.12, 'sine');
+    }
+
+    function playWin() {
+      [523,659,784,1047,1319].forEach((f,i) =>
+        setTimeout(() => playTone(f, 0.18, 'sine'), i * 90));
+    }
+
+    function playDraw() {
+      [400,350,300].forEach((f,i) =>
+        setTimeout(() => playTone(f, 0.15, 'triangle'), i * 100));
+    }
+
+    function setStatus(html) { statusEl.innerHTML = html; }
+
+    function checkWinner() {
+      for (const [a,b,c] of WINS)
+        if (board[a] && board[a] === board[b] && board[a] === board[c])
+          return { winner: board[a], combo: [a,b,c] };
+      if (board.every(Boolean)) return { winner: 'DRAW' };
+      return null;
+    }
+
+    function launchConfetti() {
+      const confColors = ['#FFD93D','#FF6B9D','#4CC9F0','#06D6A0','#9B5DE5','#FF9A3C'];
+      for (let i = 0; i < 60; i++) {
+        const el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.style.cssText = `
+          left:${Math.random()*100}%;
+          background:${confColors[Math.floor(Math.random()*confColors.length)]};
+          animation-duration:${1.2+Math.random()*1.5}s;
+          animation-delay:${Math.random()*0.5}s;
+          border-radius:${Math.random()>0.5?'50%':'2px'};
+          width:${6+Math.random()*10}px;
+          height:${6+Math.random()*10}px;
+        `;
+        document.body.appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+      }
+    }
+
+    function handleClick(i) {
+      if (gameOver || board[i]) return;
+      if (ac.state === 'suspended') ac.resume();
+
+      board[i] = current;
+      const mark = cells[i].querySelector('.mark');
+      mark.textContent = PLAYERS[current].emoji;
+      mark.className = 'mark';
+      cells[i].classList.add('taken');
+
+      playClick(current);
+
+      const result = checkWinner();
+      if (result) {
+        gameOver = true;
+        if (result.winner === 'DRAW') {
+          scores.D++;
+          scoreDEl.textContent = scores.D;
+          setStatus('🤝 Empatou!');
+          playDraw();
+          setTimeout(() => showOverlay('😅', 'Que jogo!', 'Empatou!'), 400);
+        } else {
+          const p = PLAYERS[result.winner];
+          scores[result.winner]++;
+          (result.winner === 'X' ? scoreXEl : scoreOEl).textContent = scores[result.winner];
+          result.combo.forEach(idx => cells[idx].classList.add('winner'));
+          setStatus(`${p.emoji} ${p.name} venceu! 🎉`);
+          playWin();
+          launchConfetti();
+          setTimeout(() => showOverlay('🏆', `${p.emoji} ${p.name} venceu!`, 'Parabéns! 🎊'), 400);
+        }
+        return;
+      }
+
+      current = current === 'X' ? 'O' : 'X';
+      const np = PLAYERS[current];
+      setStatus(`${np.emoji} Vez do ${np.name}!`);
+    }
+
+    function showOverlay(emoji, title, sub) {
+      document.getElementById('overlay-emoji').textContent = emoji;
+      document.getElementById('overlay-title').textContent = title;
+      document.getElementById('overlay-sub').textContent = sub;
+      overlay.classList.add('show');
+    }
+
+    function newGame() {
+      board = Array(9).fill(null);
+      current = 'X';
+      gameOver = false;
+      cells.forEach(c => {
+        c.classList.remove('taken','winner');
+        c.querySelector('.mark').textContent = '';
+      });
+      overlay.classList.remove('show');
+      setStatus(`${PLAYERS.X.emoji} Vez do ${PLAYERS.X.name}!`);
+    }
+
+    cells.forEach(c => c.addEventListener('click', () => handleClick(+c.dataset.i)));
+    document.getElementById('btn-new').addEventListener('click', newGame);
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      scores = {X:0,O:0,D:0};
+      scoreXEl.textContent = 0;
+      scoreOEl.textContent = 0;
+      scoreDEl.textContent = 0;
+      newGame();
+    });
+    document.getElementById('overlay-btn').addEventListener('click', newGame);
+  </script>
+</body>
+        </html>
+  
