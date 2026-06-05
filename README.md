@@ -28,7 +28,7 @@ Coloque o index.html na raiz
 Vá em Settings → Pages
 Em Source, selecione main / root
 Pronto! O jogo estará disponível em:
-
+https://detiillimichel-max.github.io/Jogo-crinca-velha/
 📸 Preview
 Fundo colorido com bolinhas flutuantes, 
 placar com emojis, tabuleiro branco arredondado e overlay de vitória com confete! 🎉
