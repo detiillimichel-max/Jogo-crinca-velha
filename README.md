@@ -30,5 +30,6 @@ Em Source, selecione main / root
 Pronto! O jogo estará disponível em:
 https://seu-usuario.github.io/nome-do-repo
 📸 Preview
-Fundo colorido com bolinhas flutuantes, placar com emojis, tabuleiro branco arredondado e overlay de vitória com confete! 🎉
+Fundo colorido com bolinhas flutuantes, 
+placar com emojis, tabuleiro branco arredondado e overlay de vitória com confete! 🎉
 Feito com ❤️ para crianças se divertirem!
